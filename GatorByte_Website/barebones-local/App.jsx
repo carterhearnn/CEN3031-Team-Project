@@ -1,3 +1,6 @@
+import React from 'react';
+import './styles.css';
+
 const h = React.createElement;
 
 /*
@@ -397,7 +400,4 @@ function App() {
   );
 }
 
-// React mounts the entire GatorByte frontend into <div id="root"> in index.html.
-// Teammates adding new pages/components can eventually split App into separate files
-// once the project moves to a normal React build setup (Vite/Create React App/etc.).
-ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+export default App;
