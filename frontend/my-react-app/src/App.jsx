@@ -1,25 +1,241 @@
 // src/App.jsx
-import React, { useEffect } from "react";
-import { db } from "./firebase"; // Import the db instance you exported
-import { collection, addDoc } from "firebase/firestore";
+import { useState } from "react";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "./firebase";
+import "./App.css";
+
+const schemas = {
+  deals: [
+    { name: "dateApproved", label: "Date approved", type: "datetime-local" },
+    { name: "dateSubmitted", label: "Date submitted", type: "datetime-local" },
+    { name: "link", label: "Link", type: "url" },
+  ],
+  users: [
+    { name: "dateCreated", label: "Date created", type: "datetime-local" },
+    { name: "userID", label: "User ID", type: "number" },
+    { name: "username", label: "Username", type: "text" },
+  ],
+  wishlist: [
+    { name: "link", label: "Link", type: "url" },
+    { name: "name", label: "Name", type: "text" },
+    { name: "userID", label: "User ID", type: "number" },
+  ],
+};
+
+const emptyValues = (collectionName) =>
+  Object.fromEntries(schemas[collectionName].map(({ name }) => [name, ""]));
 
 function App() {
-  const handleAddData = async () => {
+  const [collectionName, setCollectionName] = useState("deals");
+  const [values, setValues] = useState(emptyValues("deals"));
+  const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [tables, setTables] = useState(null);
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
+  const [tableError, setTableError] = useState("");
+
+  const handleCollectionChange = (event) => {
+    const nextCollection = event.target.value;
+    setCollectionName(nextCollection);
+    setValues(emptyValues(nextCollection));
+    setMessage("");
+  };
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setValues((currentValues) => ({ ...currentValues, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setMessage("");
+    setIsSaving(true);
+
     try {
-      await addDoc(collection(db, "test_collection"), {
-        message: "Hello from React!",
-        timestamp: new Date()
-      });
-      console.log("Document successfully written!");
-    } catch (e) {
-      console.error("Error adding document: ", e);
+      const record = {};
+      for (const field of schemas[collectionName]) {
+        const value = values[field.name].trim();
+        if (!value) {
+          throw new Error(`${field.label} is required.`);
+        }
+
+        if (field.type === "number") {
+          const numberValue = Number(value);
+          if (!Number.isInteger(numberValue)) {
+            throw new Error(`${field.label} must be a whole number.`);
+          }
+          record[field.name] = numberValue;
+        } else if (field.type === "datetime-local") {
+          const dateValue = new Date(value);
+          if (Number.isNaN(dateValue.getTime())) {
+            throw new Error(`${field.label} must be a valid date.`);
+          }
+          record[field.name] = Timestamp.fromDate(dateValue);
+        } else {
+          record[field.name] = value;
+        }
+      }
+
+      await addDoc(collection(db, collectionName), record);
+      setValues(emptyValues(collectionName));
+      setMessage(`Record added to ${collectionName}.`);
+    } catch (error) {
+      console.error("Error adding document:", error);
+      setMessage(error.message || "Unable to add the record.");
+    } finally {
+      setIsSaving(false);
     }
-  };  
+  };
+
+  const handleDisplayTables = async () => {
+    setIsLoadingTables(true);
+    setTableError("");
+
+    try {
+      const results = await Promise.all(
+        Object.keys(schemas).map(async (name) => {
+          const snapshot = await getDocs(collection(db, name));
+          return [
+            name,
+            snapshot.docs.map((document) => ({
+              id: document.id,
+              ...document.data(),
+            })),
+          ];
+        }),
+      );
+      setTables(Object.fromEntries(results));
+    } catch (error) {
+      console.error("Error loading tables:", error);
+      setTableError("Unable to load the Firestore tables.");
+    } finally {
+      setIsLoadingTables(false);
+    }
+  };
+
+  const formatValue = (value) => {
+    if (value instanceof Timestamp) {
+      return value.toDate().toLocaleString();
+    }
+    if (value?.toDate instanceof Function) {
+      return value.toDate().toLocaleString();
+    }
+    return String(value ?? "");
+  };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>CEN3031 Team Project</h1>
-      <button onClick={handleAddData}>Add Data to Firestore</button>
+    <div className="app">
+      <header>
+        <p className="eyebrow">CEN3031 Team Project</p>
+        <h1>Add a database record</h1>
+        <p className="intro">
+          Choose a collection and enter the fields from the Firestore schema.
+        </p>
+      </header>
+
+      <main className="record-card">
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="collection">Collection</label>
+          <select
+            id="collection"
+            value={collectionName}
+            onChange={handleCollectionChange}
+          >
+            {Object.keys(schemas).map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+
+          <div className="field-grid">
+            {schemas[collectionName].map((field) => (
+              <div className="field" key={field.name}>
+                <label htmlFor={field.name}>{field.label}</label>
+                <input
+                  id={field.name}
+                  name={field.name}
+                  type={field.type}
+                  value={values[field.name]}
+                  onChange={handleChange}
+                  required
+                  step={field.type === "number" ? "1" : undefined}
+                />
+              </div>
+            ))}
+          </div>
+
+          <button className="submit-button" type="submit" disabled={isSaving}>
+            {isSaving ? "Saving..." : `Add ${collectionName} record`}
+          </button>
+        </form>
+        {message && (
+          <p className={message.startsWith("Record") ? "success" : "error"}>
+            {message}
+          </p>
+        )}
+      </main>
+
+      <section className="tables-section" aria-live="polite">
+        <div className="tables-heading">
+          <div>
+            <h2>Firestore tables</h2>
+            <p>Load the current records from each collection.</p>
+          </div>
+          <button
+            className="display-button"
+            type="button"
+            onClick={handleDisplayTables}
+            disabled={isLoadingTables}
+          >
+            {isLoadingTables ? "Loading..." : "Display tables"}
+          </button>
+        </div>
+
+        {tableError && <p className="error">{tableError}</p>}
+        {tables && (
+          <div className="tables-list">
+            {Object.entries(tables).map(([name, records]) => (
+              <div className="table-card" key={name}>
+                <h3>{name}</h3>
+                {records.length === 0 ? (
+                  <p className="empty-table">No records found.</p>
+                ) : (
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Document ID</th>
+                          {schemas[name].map((field) => (
+                            <th key={field.name}>{field.label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {records.map((record) => (
+                          <tr key={record.id}>
+                            <td>{record.id}</td>
+                            {schemas[name].map((field) => (
+                              <td key={field.name}>
+                                {formatValue(record[field.name])}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
