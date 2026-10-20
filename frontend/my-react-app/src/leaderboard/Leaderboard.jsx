@@ -59,17 +59,18 @@ export default function Leaderboard() {
                 <>
                   <div className="lb-main">
                     <strong>{item.username ?? `User ${item.userID}`}</strong>
-                    <span>{item.deals} deals · {item.upvotes} upvotes</span>
+                    <span>{item.deals} deals · ▲ {item.upvotes} · ▼ {item.downvotes}</span>
                   </div>
                   <strong className="lb-score">{item.points} pts</strong>
                 </>
               ) : (
                 <>
                   <div className="lb-main">
-                    <a href={item.link} target="_blank" rel="noreferrer">{item.title ?? item.link}</a>
+                    <a href={item.link} target="_blank" rel="noreferrer">
+                      {item.itemName ? (item.brand ? `${item.itemName} (${item.brand})` : item.itemName) : item.link}
+                    </a>
                     <span>by {names.get(item.userID) ?? "unknown"}</span>
                   </div>
-                  <strong className="lb-score">▲ {item.upvotes}</strong>
                 </>
               )}
             </li>

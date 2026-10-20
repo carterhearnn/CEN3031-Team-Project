@@ -9,14 +9,19 @@ import {
 import { db } from "./firebase";
 import "./App.css";
 import Leaderboard from "./leaderboard/Leaderboard";
+import Wishlist from "./wishlist/Wishlist";
 
 const schemas = {
   deals: [
     { name: "dateApproved", label: "Date approved", type: "datetime-local" },
     { name: "dateSubmitted", label: "Date submitted", type: "datetime-local" },
     { name: "link", label: "Link", type: "url" },
+    { name: "brand", label: "Brand", type: "text" },
+    { name: "itemName", label: "Item name", type: "text" },
+    { name: "price", label: "Price ($)", type: "number", decimal: true },
     { name: "userID", label: "Submitted by (User ID)", type: "number" },
     { name: "upvotes", label: "Upvotes", type: "number" },
+    { name: "downvotes", label: "Downvotes", type: "number" },
   ],
   users: [
     { name: "dateCreated", label: "Date created", type: "datetime-local" },
@@ -24,9 +29,11 @@ const schemas = {
     { name: "username", label: "Username", type: "text" },
   ],
   wishlist: [
-    { name: "link", label: "Link", type: "url" },
-    { name: "name", label: "Name", type: "text" },
     { name: "userID", label: "User ID", type: "number" },
+    { name: "brand", label: "Brand", type: "text" },
+    { name: "itemName", label: "Item name", type: "text" },
+    { name: "desiredPrice", label: "Desired price ($)", type: "number", decimal: true },
+    { name: "link", label: "Link (optional)", type: "url", optional: true },
   ],
 };
 
@@ -64,13 +71,19 @@ function App() {
       for (const field of schemas[collectionName]) {
         const value = values[field.name].trim();
         if (!value) {
+          if (field.optional) continue;
           throw new Error(`${field.label} is required.`);
         }
 
         if (field.type === "number") {
           const numberValue = Number(value);
-          if (!Number.isInteger(numberValue)) {
-            throw new Error(`${field.label} must be a whole number.`);
+          const valid = field.decimal
+            ? Number.isFinite(numberValue) && numberValue >= 0
+            : Number.isInteger(numberValue);
+          if (!valid) {
+            throw new Error(field.decimal
+              ? `${field.label} must be a valid price.`
+              : `${field.label} must be a whole number.`);
           }
           record[field.name] = numberValue;
         } else if (field.type === "datetime-local") {
@@ -166,7 +179,7 @@ function App() {
                   type={field.type}
                   value={values[field.name]}
                   onChange={handleChange}
-                  required
+                  required={!field.optional}
                   step={field.type === "number" ? "1" : undefined}
                 />
               </div>
@@ -240,6 +253,7 @@ function App() {
         )}
       </section>
       <Leaderboard />
+      <Wishlist /> 
     </div>
   );
 }
