@@ -8,12 +8,15 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import "./App.css";
+import Leaderboard from "./leaderboard/Leaderboard";
 
 const schemas = {
   deals: [
     { name: "dateApproved", label: "Date approved", type: "datetime-local" },
     { name: "dateSubmitted", label: "Date submitted", type: "datetime-local" },
     { name: "link", label: "Link", type: "url" },
+    { name: "userID", label: "Submitted by (User ID)", type: "number" },
+    { name: "upvotes", label: "Upvotes", type: "number" },
   ],
   users: [
     { name: "dateCreated", label: "Date created", type: "datetime-local" },
@@ -236,6 +239,7 @@ function App() {
           </div>
         )}
       </section>
+      <Leaderboard />
     </div>
   );
 }
