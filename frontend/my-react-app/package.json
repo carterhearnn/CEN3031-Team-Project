@@ -7,10 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server/index.js",
+    "test:server": "node --test server/features/deal-discussions/*.test.js",
+    "check:isolation": "node scripts/check-deal-isolation.js"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "firebase": "^13.0.0",
+    "image-size": "^2.0.4",
+    "ipaddr.js": "^2.5.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
