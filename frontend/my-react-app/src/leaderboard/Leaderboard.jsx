@@ -2,9 +2,18 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { rankDeals, rankUsers } from "./ranking";
+import { dealPath } from "../features/deal-discussions/integration.js";
 import "./Leaderboard.css";
 
-const rows = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+const rows = (snap) => snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+
+async function loadLeaderboard() {
+  const [users, deals] = await Promise.all([
+    getDocs(collection(db, "users")),
+    getDocs(collection(db, "deals")),
+  ]);
+  return { users: rows(users), deals: rows(deals) };
+}
 
 export default function Leaderboard() {
   const [view, setView] = useState("users");
@@ -14,11 +23,7 @@ export default function Leaderboard() {
   async function load() {
     setStatus("loading");
     try {
-      const [userSnap, dealSnap] = await Promise.all([
-        getDocs(collection(db, "users")),
-        getDocs(collection(db, "deals")),
-      ]);
-      setData({ users: rows(userSnap), deals: rows(dealSnap) });
+      setData(await loadLeaderboard());
       setStatus("ready");
     } catch (err) {
       console.error("Leaderboard load failed:", err);
@@ -26,7 +31,16 @@ export default function Leaderboard() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let active = true;
+    loadLeaderboard().then((result) => {
+      if (active) { setData(result); setStatus("ready"); }
+    }).catch((err) => {
+      console.error("Leaderboard load failed:", err);
+      if (active) setStatus("error");
+    });
+    return () => { active = false; };
+  }, []);
 
   const names = new Map(data.users.map((u) => [u.userID, u.username]));
   const list = view === "users"
@@ -50,7 +64,7 @@ export default function Leaderboard() {
         <p className="lb-note">No ranked {view} yet. Add an approved deal with a User ID to see it here.</p>
       )}
 
-      {status === "ready" && list.length > 0 && (
+          {status === "ready" && list.length > 0 && (
         <ol className="lb-list">
           {list.map((item, i) => (
             <li className="lb-row" key={item.id}>
@@ -66,10 +80,14 @@ export default function Leaderboard() {
               ) : (
                 <>
                   <div className="lb-main">
-                    <a href={item.link} target="_blank" rel="noreferrer">
+                    <a href={dealPath(item.id)} target="_blank" rel="noopener noreferrer">
                       {item.itemName ? (item.brand ? `${item.itemName} (${item.brand})` : item.itemName) : item.link}
                     </a>
                     <span>by {names.get(item.userID) ?? "unknown"}</span>
+                  </div>
+                  <div className="lb-votes">
+                    <strong className="lb-score">{item.score > 0 ? "+" : ""}{item.score}</strong>
+                    <span>▲ {item.upvotes} · ▼ {item.downvotes}</span>
                   </div>
                 </>
               )}

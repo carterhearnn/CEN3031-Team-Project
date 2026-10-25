@@ -1,7 +1,7 @@
 .leaderboard { margin-top: 48px; padding: 28px; border: 1px solid var(--line);
   border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
 .lb-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
-.lb-head h2 { margin: 0; }
+.lb-head h2 { margin: 0; color: var(--ink); }
 .lb-tabs { display: flex; gap: 6px; }
 .lb-tabs button { border: 1px solid var(--line); background: var(--bg); border-radius: 8px;
   padding: 8px 12px; cursor: pointer; font-weight: 700; }

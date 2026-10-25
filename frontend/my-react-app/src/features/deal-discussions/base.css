@@ -1,0 +1,23 @@
+/* This entry belongs only to deal.html. Do not import the host application's CSS. */
+:root {
+  color-scheme: light;
+  color: #192b21;
+  background: #f7f8f4;
+  font-family: Arial, Helvetica, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+p { margin: 0; }
+#deal-root { width: 1126px; max-width: 100%; min-height: 100svh; margin: 0 auto; border-inline: 1px solid #d7ddd7; }
+.deal-page label { display: block; color: #192b21; }
+.deal-page button { color: inherit; }
+.deal-page select { padding: 8px; color: #192b21; background: #fff; border: 1px solid #d7ddd7; }
+.deal-page button:focus-visible, .deal-page select:focus-visible { outline: 3px solid #1f7a4d66; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .deal-page *, .deal-page *::before, .deal-page *::after { transition: none !important; }
+}
