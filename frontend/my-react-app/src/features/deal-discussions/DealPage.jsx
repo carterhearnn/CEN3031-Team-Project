@@ -3,6 +3,7 @@ import { readDeal } from "./data/deals.js";
 import Comments from "./components/Comments";
 import { externalUrl, formatDate, formatPrice } from "./lib/deals";
 import { fetchProductPreview } from "./lib/productPreview";
+import GoogleLogin from "../../login/login.jsx";
 import "./DealPage.css";
 
 function Product({ deal }) {
@@ -88,7 +89,7 @@ export default function DealPage({ dealId, preview = false }) {
   }, [deal?.title]);
 
   return <div className="deal-page">
-    <nav className="deal-nav" aria-label="Main navigation"><a className="wordmark" href="/">GATOR<span>BYTE</span></a><a href="/">Back to all deals</a></nav>
+    <nav className="deal-nav" aria-label="Main navigation"><a className="wordmark" href="/">GATOR<span>BYTE</span></a><a href="/">Back to all deals</a><GoogleLogin className="deal-login-button" /></nav>
     <main>
       {preview || state === "ready" ? <div className="deal-post"><Product key={`product-${dealId}`} deal={preview ? {
         preview: true, title: "Wireless over-ear headphones", price: "79.99", currency: "USD", link: "https://example.com",
