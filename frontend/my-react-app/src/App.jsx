@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import HomePage from "./home/HomePage.jsx";
+import GoogleLogin from "./login/login.jsx";
 import RecordPage from "./pages/RecordPage.jsx";
 import "./App.css";
 
@@ -20,6 +21,7 @@ export default function App() {
         <nav className="site-nav" aria-label="Main navigation">
           <a href="/#deals">Deals</a>
           <a href="/#leaderboard">Leaderboard</a>
+          <GoogleLogin className="site-button site-button-secondary" />
           <a className="site-button site-button-primary" href="/submit" aria-current={isSubmit ? "page" : undefined}>Submit a record <span aria-hidden="true">+</span></a>
         </nav>
       </div>
