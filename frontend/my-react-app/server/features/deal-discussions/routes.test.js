@@ -16,7 +16,7 @@ test('identifies feature routes, including encoded document IDs and dots', () =>
   for (const pathname of ['/preview/deal', '/preview/deal/', '/deals/abc', '/deals/id.with.dots', '/deals/a%20b/', '/deals/a%252Fb']) {
     assert.equal(isDealDiscussionPath(pathname), true, pathname)
   }
-  for (const pathname of ['/', '/index.html', '/submit', '/submit/', '/deal.html', '/deals', '/deals/a/b', '/deals/a%2Fb', '/deals/%ZZ', '/api/deal-preview']) {
+  for (const pathname of ['/', '/index.html', '/submit', '/submit/', '/leaderboard', '/leaderboard/', '/wishlist', '/wishlist/', '/deal.html', '/deals', '/deals/a/b', '/deals/a%2Fb', '/deals/%ZZ', '/api/deal-preview']) {
     assert.equal(isDealDiscussionPath(pathname), false, pathname)
   }
 })
@@ -46,6 +46,11 @@ async function checkRoutes(base) {
     ['/index.html', mainHtml],
     ['/submit', mainHtml],
     ['/submit/', mainHtml],
+    ['/leaderboard', mainHtml],
+    ['/leaderboard/', mainHtml],
+    ['/wishlist', mainHtml],
+    ['/wishlist/', mainHtml],
+    ['/deals', mainHtml],
     ['/dashboard', mainHtml],
     ['/account/preferences?tab=saved', mainHtml],
   ]

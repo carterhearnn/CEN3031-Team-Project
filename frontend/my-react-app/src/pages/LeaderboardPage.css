@@ -1,0 +1,17 @@
+.leaderboard-page { min-width: 0; padding: 32px 0 48px; }
+.leaderboard-page-content { max-width: 960px; }
+.leaderboard-page h1 { margin: 0 0 22px; color: var(--ink); font-size: 29px; line-height: 1.2; font-weight: 700; letter-spacing: -.9px; }
+.leaderboard-page .leaderboard { padding: 24px; }
+.leaderboard-page .lb-head { justify-content: flex-end; margin-bottom: 12px; }
+.leaderboard-page .lb-head h2 { display: none; }
+.leaderboard-page .lb-row { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 14px; padding-block: 16px; }
+.leaderboard-page .lb-rank { width: 25px; height: 25px; font-size: 12px; }
+.leaderboard-page .lb-main strong, .leaderboard-page .lb-main a { font-size: 14px; }
+.leaderboard-page .lb-main span { font-size: 12px; }
+.leaderboard-page .lb-score { font-size: 14px; }
+
+@media (max-width: 600px) {
+  .leaderboard-page { padding: 24px 0 32px; }
+  .leaderboard-page h1 { font-size: 26px; }
+  .leaderboard-page .leaderboard { padding: 18px; }
+}

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { readDeal } from "./data/deals.js";
+import { watchDeal } from "./data/deals.js";
 import Comments from "./components/Comments";
 import { externalUrl, formatDate, formatPrice } from "./lib/deals";
 import { fetchProductPreview } from "./lib/productPreview";
 import GoogleLogin from "../../login/login.jsx";
+import GatorByteLogo from "../../shared/GatorByteLogo.jsx";
+import DealDeleteButton, { DealDeletionProvider } from "../../shared/DealDeleteButton.jsx";
 import "./DealPage.css";
 
 function Product({ deal }) {
@@ -38,9 +40,8 @@ function Product({ deal }) {
       <ImageContainer
         className={`product-image-wrap${link ? " product-image-link" : ""}`}
         href={link || undefined}
-        target={link ? "_blank" : undefined}
-        rel={link ? "noopener noreferrer" : undefined}
-        aria-label={link ? `View ${title} at ${merchant} (opens in a new tab)` : undefined}
+        rel={link ? "noreferrer" : undefined}
+        aria-label={link ? `View ${title} at ${merchant}` : undefined}
       >
         {image ? <img className="product-image" src={image} alt={title} referrerPolicy="no-referrer" onError={() => setBrokenImages((previous) => [...previous, image])} /> :
           <div className="product-image-fallback">
@@ -52,14 +53,15 @@ function Product({ deal }) {
         <span className="merchant-pill">{merchant}</span>
         <h1 id="product-title">{title}</h1>
         {price && <p className="product-price">{price}{deal.preview && <span>Sample price</span>}</p>}
-        <p className="product-description">{description || "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."}</p>
+        {description && <p className="product-description">{description}</p>}
         {deal.dateSubmitted && <p className="product-submitted">Posted {formatDate(deal.dateSubmitted)}</p>}
         <div className="product-cta">
-          {link && <a className="primary-button" href={link} target="_blank" rel="noopener noreferrer">{deal.preview ? "Open example listing" : "View original deal"} <span aria-hidden="true">↗</span></a>}
+          {link && <a className="primary-button" href={link} rel="noreferrer">{deal.preview ? "Open example listing" : "View original deal"}</a>}
           <button className="secondary-button" type="button" onClick={async () => {
           try { await navigator.clipboard.writeText(window.location.href); setShareStatus("Link copied."); }
           catch { setShareStatus("Couldn't copy. You can copy the link from your address bar."); }
         }}>Copy link</button>
+          <DealDeleteButton dealId={deal.id} className="secondary-button" />
         </div>
         <p className="share-status" role="status">{shareStatus}</p>
       </div>
@@ -68,18 +70,13 @@ function Product({ deal }) {
 }
 
 export default function DealPage({ dealId, preview = false }) {
-  const [deal, setDeal] = useState(null);
-  const [state, setState] = useState("loading");
+  const [{ deal, state }, setListing] = useState({ deal: null, state: "loading" });
 
   useEffect(() => {
-    let active = true;
     if (preview) return;
-    readDeal(dealId).then((record) => {
-      if (!active) return;
-      if (!record) setState("missing");
-      else { setDeal(record); setState("ready"); }
-    }).catch(() => { if (active) setState("error"); });
-    return () => { active = false; };
+    return watchDeal(dealId, (record) => {
+      setListing({ deal: record, state: record ? "ready" : "missing" });
+    }, () => setListing({ deal: null, state: "error" }));
   }, [dealId, preview]);
 
   useEffect(() => {
@@ -89,16 +86,16 @@ export default function DealPage({ dealId, preview = false }) {
   }, [deal?.title]);
 
   return <div className="deal-page">
-    <nav className="deal-nav" aria-label="Main navigation"><a className="wordmark" href="/">GATOR<span>BYTE</span></a><a href="/">Back to all deals</a><GoogleLogin className="deal-login-button" /></nav>
-    <main>
+    <nav className="deal-nav" aria-label="Main navigation"><GatorByteLogo /><a href="/">Back to all deals</a><GoogleLogin className="deal-login-button" /></nav>
+    <main><DealDeletionProvider>
       {preview || state === "ready" ? <div className="deal-post"><Product key={`product-${dealId}`} deal={preview ? {
         preview: true, title: "Wireless over-ear headphones", price: "79.99", currency: "USD", link: "https://example.com",
-        description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
       } : deal} /><Comments key={`comments-${dealId}`} dealId={dealId} /></div> : <section className="deal-state" role="status">
-        <h1>{state === "loading" ? "Loading deal…" : state === "missing" ? "Deal not found." : "Couldn't load this deal."}</h1>
-        {state !== "loading" && <p>{state === "missing" ? "It may have been removed, or the link may be incomplete." : "Check your connection, then refresh to try again."}</p>}
+        {state === "loading" && <h1>Loading deal…</h1>}
+        {state === "missing" && <><h1>Deal not found.</h1><p>It may have been removed, or the link may be incomplete.</p></>}
+        {state === "error" && <><h1>Couldn't load this deal.</h1><p>Check your connection, then refresh to try again.</p></>}
         {state !== "loading" && <a className="primary-button" href="/">Back to all deals</a>}
       </section>}
-    </main>
+    </DealDeletionProvider></main>
   </div>;
 }

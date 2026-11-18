@@ -9,24 +9,89 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. The original landing-page layout now runs
-inside the React app and uses the same green and off-white styling as the
-record form and deal page.
+Open the local URL printed by Vite. The React app uses its original green,
+off-white, and white palette with a compact, vertically scrolling deals list.
 
-- `/` is the home page: one searchable **All deals** carousel above the leaderboard.
-- `/submit` contains only the record input form. **Submit a record** opens it.
-- Clicking a deal opens `/deals/<document-id>` in a separate tab with its
+- `/` (also `/deals`) is the searchable **All deals** list.
+- `/leaderboard` is the separate **Top users / Top deals** leaderboard.
+- `/wishlist` shows only the signed-in user's saved deals, using the same searchable
+  list as the deals page, with a **Remove** button beside each item.
+- `/submit` is **Add a Deal**, with only deal inputs and no collection selector.
+- Clicking a deal opens `/deals/<document-id>` in the current tab with its
   product details and comments.
 
-The carousel shows all approved Firestore deals. The carousel advances
-every five seconds when its contents overflow, wraps to the start, and supports
-manual scrolling and previous/next controls. Rotation pauses during interaction
-and honors reduced-motion settings. Home-page components live in `src/home/`;
-the submission form lives in `src/pages/RecordPage.jsx`.
+The list shows all approved Firestore deals in rows with their thumbnail, title,
+store, submission date, submitter name, available price, and upvote count. Submitter
+names come from the matching Firestore user profile (`username`, `name`, or `displayName`);
+unassigned or missing profiles show **Unknown user**. It uses normal document
+scrolling and sorts by newest, most upvoted, or price. Missing prices sort last.
+Search also includes metadata after it loads. There are no ads, sponsored rows,
+feedback widgets, invented activity counters, or unsupported filter controls.
+
+Home-page components live in `src/home/`; the submission form lives in
+`src/pages/RecordPage.jsx`. The previous `DealCarousel` files remain in the
+repository but are not imported by the home page. Product preview lookups remain
+cached, lazy, cancellable, and limited to three concurrent requests.
+
+## Accounts and submission permissions
+
+The header provides Google and email/password login. New accounts receive
+`userState: 0`. Signing in again preserves existing roles and profile dates.
+To assign a role in Firebase Console, set the numeric field `userState` on
+`users/<Firebase Auth UID>` to `0` for Member, `1` for Admin, or `2` for Owner.
+The legacy `userStatus` field is used only when `userState` is absent. Invalid
+roles default to Member.
+
+| Role | Add a Deal inputs |
+| --- | --- |
+| User (`0`) | Deal link |
+| Admin (`1`) | Deal link and approval status |
+| Owner (`2`) | Deal link, approval status, submission/approval dates, submitter ID, upvotes |
+
+Regular submissions automatically use the current account ID, current submission
+time, zero upvotes, and pending approval. Pending deals do not appear in the public
+approved-deals list. Approved admin submissions receive the current approval time.
+Owner overrides are optional. Product metadata is retrieved from the link.
+
+Signed-in admins and owners can permanently delete listings from Deals or a
+deal detail page after confirmation. Firestore verifies the account's role.
+
+Each deal row has an **Add to wishlist** button. Saved items show **Saved**, and
+repeated saves reuse the same Firestore document instead of making duplicates.
+Wishlist has no submission form: all roles see their own saved deals and can remove
+them without deleting the original deal. The deal ID, title, link, account ID, and
+save time are recorded automatically. Live deal data supplies the current price,
+thumbnail, upvotes, and submitter name. Older saved links remain readable and
+removable. Personal wishlist access uses the Firebase Auth UID.
+
+`firestore.rules` enforces these permissions, prevents users from promoting their
+own role, and restricts wishlist reads to the owning account (or a site owner).
+These repository rules must be published to the intended Firebase project before
+they enforce access on the live database. The UI alone is not database enforcement.
+From this directory, with Firebase CLI installed and authenticated, publish only
+the rules using the explicit project ID:
+
+```sh
+firebase deploy --only firestore:rules --project <your-project-id>
+```
+
+No live rules or database records are changed by local development or the tests.
+
+To test the rules locally, install Java 21 or newer, then run these PowerShell
+commands from `frontend/my-react-app`. Test tools are installed in a temporary
+directory; the emulator uses the demo project and does not require Firebase login.
+
+```powershell
+$rulesTools = Join-Path $env:TEMP 'gatorbyte-rules-tools'
+npm install --prefix $rulesTools --package-lock=false --no-audit --no-fund firebase-tools @firebase/rules-unit-testing firebase
+$env:RULES_TEST_DEPENDENCIES = $rulesTools
+& (Join-Path $rulesTools 'node_modules/.bin/firebase.cmd') emulators:exec --only firestore --project demo-gatorbyte --config firebase.json 'node scripts/test-firestore-rules.mjs'
+Remove-Item Env:RULES_TEST_DEPENDENCIES
+```
 
 ## PBI #12: Deal discussion shell
 
-The deal tab is an independent page (`deal.html`) with its own entry, styles,
+The deal detail page (`deal.html`) has its own entry, styles,
 and modules in `src/features/deal-discussions/`. Its server code lives in
 `server/features/deal-discussions/`. The main app calls only the feature's
 `integration.js` interface. See the [feature maintenance guide](src/features/deal-discussions/README.md)
@@ -35,7 +100,7 @@ for boundaries, shared contracts, and merge guidance. After building, run
 and that the deal page does not depend on the main app's components or CSS.
 
 Visit `/preview/deal` for a sample product page, or open a real deal from the
-home-page carousel or **Top deals** leaderboard.
+home-page list or **Top deals** leaderboard.
 
 After a Git pull or stash restore that changes Vite configuration or server
 modules, stop the old dev server with Ctrl+C and restart `npm run dev`.
@@ -48,23 +113,23 @@ Replies are collapsed by default and can be expanded. Comments support exclusive
 upvotes/downvotes, delete confirmation, and pins. Clicking a selected vote clears
 it; switching directions changes the score by two. Existing saved likes migrate
 to votes without removing comments. New comments appear as
-**You**. Switch **Preview role** to **Admin** to try deleting other comments and
-pinning/unpinning. Deleting a comment leaves its replies intact. Sample comments
-are labeled, and each deal's preview changes are saved in this browser's local
-storage. These controls are demonstrations, not real access control.
+**You**. Signed-in admins and owners can pin and moderate comments in their browser.
+Deleting a comment leaves its replies intact. Discussions start empty and each
+deal's comments are saved in this browser's local storage.
 
-This version adds no sign-in or shared comment database. Existing deals are read
-from Firestore; comment actions never write to Firestore. Optional saved deal
+The main app supports Google and email/password authentication through
+`src/login/`. The deal comments remain a local preview with no shared comment
+database or enforced account/admin permissions. Existing deals are read from
+Firestore; comment actions never write to Firestore. Optional saved deal
 fields `title`, `description`, `imageUrl`, `price`, and `currency` populate the
-product layout. Real accounts, shared comments, and enforced admin permissions
-are future work.
+product layout. Shared comments and enforced comment permissions are future work.
 
 ## Product thumbnails
 
 Submitting a deal link looks up its title, thumbnail, description, and available
 price through the same-origin `/api/deal-preview?url=...` endpoint. Submission
 saves available metadata with the deal, and older link-only deals look it up
-when opened. Images appear on product cards and the final product page, with
+when opened. Images appear in product rows and the final product page, with
 no image field or thumbnail preview in the submission form. Images are retrieved
 automatically from the submitted link; users do not upload photos or enter
 image URLs. For Amazon product links, the server can also retrieve a thumbnail
@@ -82,14 +147,15 @@ public HTTP(S) addresses and validates redirects, response sizes, and timeouts.
 Run `npm run test:server` for the metadata endpoint tests.
 
 Custom hosting must route `/deals/<id>` and `/preview/deal` to `deal.html`, and
-`/submit` to `index.html`. The included development, preview, and production
+`/deals`, `/submit`, `/leaderboard`, and `/wishlist` to `index.html`.
+The included development, preview, and production
 servers already handle these routes. Static hosting also needs a backend for
 product metadata.
 
 Issue draft (the GitHub connector did not have permission to create the issue):
 **PBI #12: Deal detail page and comment UI prototype**. Acceptance criteria are a
-new-tab deal page, side-by-side product/comment layout, local comment/reply/vote
-interactions, member/admin preview controls, and no sign-in requirement.
+deal detail page, side-by-side product/comment layout, local comment/reply/vote
+interactions, with posting available to guests and moderation controls for admins and owners.
 
 ## Original template notes
 

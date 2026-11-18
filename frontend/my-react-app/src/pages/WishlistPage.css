@@ -1,0 +1,6 @@
+.wishlist-page { padding: 32px 0 48px; min-width: 0; }
+.wishlist-page > .site-container > h1 { margin: 0 0 22px; font-size: 29px; line-height: 1.2; letter-spacing: -.9px; }
+@media (max-width: 600px) {
+  .wishlist-page { padding: 24px 0 32px; }
+  .wishlist-page > .site-container > h1 { font-size: 26px; }
+}
