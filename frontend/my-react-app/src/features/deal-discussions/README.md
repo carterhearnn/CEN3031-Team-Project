@@ -1,6 +1,6 @@
 # Deal discussions
 
-This feature owns the separate product/comment tab. Keep its implementation in
+This feature owns the product and comment page. Keep its implementation in
 this directory and `server/features/deal-discussions/` when reviewing or merging
 changes.
 
@@ -15,18 +15,33 @@ changes.
   metadata, and submission enrichment.
 - `data/deals.js` connects to the shared `src/firebase.js` configuration. Generic
   URL validation lives in `src/shared/urls.js`.
+- `DealPage.jsx` deliberately shares `src/login/login.jsx` with the main app.
+  That component may use `src/firebase.js`, its account/profile/role modules in
+  `src/login/`, and its own `Login.css`. Its styles
+  must stay within `.login-*` selectors; it must not import other host UI or
+  page styles.
+- Both pages use `src/shared/GatorByteLogo.jsx` for the GATORBYTE wordmark.
+- Both pages share `src/shared/DealDeleteButton.jsx` for listing deletion.
+  Each page styles its own delete control.
+- `components/Comments.jsx` reads the signed-in account's role through
+  `src/login/useAccount.js`. Signed-in admins and owners can pin comments
+  and remove any comment saved in the browser. The browser's own comments
+  appear as **You** and remain removable by the person using that browser.
 - `server/features/deal-discussions/` owns product metadata, the Amazon thumbnail
   fallback, route handling, and backend tests. Other server code uses its
   `index.js` interface.
 
 The deliberate shared contracts are the Firestore `deals` schema, Firebase
-configuration, shared URL validation, package dependencies, `vite.config.js`,
+configuration, shared URL validation, the login component and its scoped CSS,
+package dependencies, `vite.config.js`,
 `server/index.js`, and the main app's integration calls. Changes to these require
 checking both pages.
 
 Keep `/deals/<id>`, `/preview/deal`, and `/api/deal-preview` compatible. Preserve
 the comment storage key `gatorbyte:comment-preview:v1:<dealId>` or provide a
 migration; comments currently stay in the browser and do not require sign-in.
+Fresh discussions start empty. The storage reader discards earlier sample
+comments and keeps user-written replies, including replies to those samples.
 
 ## Verification
 
@@ -39,8 +54,10 @@ npm run test:server
 npm run check:isolation
 ```
 
-Check that the built deal entry loads its own styles without the main page's
-styles. Verify direct deal URLs, an existing Amazon deal thumbnail, and comment
+Check that each built entry owns its page styles. The shared login stylesheet
+is allowed only when every rule stays scoped to `.login-*`; other main-page
+styles and components remain forbidden in the deal entry. Verify direct deal
+URLs, an existing Amazon deal thumbnail, and comment
 replies/votes after changing a shared contract.
 
 ## Git workflow

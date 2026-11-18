@@ -1,88 +1,27 @@
-.record-page {
-  width: min(850px, 100%);
-  margin: 0 auto;
-  padding: 34px 28px 76px;
-  color: var(--ink);
-  text-align: left;
-}
-
-.record-page .record-back {
-  display: inline-block;
-  margin-bottom: 27px;
-  color: var(--muted);
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.record-page .record-back:hover { color: var(--accent); }
-.record-page .record-page-heading { margin-bottom: 29px; }
-.record-page .record-page-heading h1 {
-  margin: 0 0 13px;
-  color: var(--ink);
-  font-size: clamp(30px, 4.6vw, 46px);
-  line-height: 1.14;
-  font-weight: 650;
-  letter-spacing: -1.9px;
-}
-.record-page .record-page-heading p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
-
-.record-page .record-form {
-  padding: 28px;
-  border: 1px solid var(--line);
-  border-radius: 15px;
-  background: var(--surface);
-  box-shadow: 0 16px 45px #172e1f08;
-}
-.record-page .record-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.record-page .record-field { min-width: 0; }
-.record-page .record-field label { display: block; margin-bottom: 8px; color: var(--ink); font-size: 12px; font-weight: 700; }
-.record-page .record-field input,
-.record-page .record-field select {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  min-height: 47px;
-  padding: 12px 13px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  color: var(--ink);
-  background: var(--bg);
-  font: inherit;
-  font-size: 14px;
-  line-height: 1.5;
-}
-.record-page .record-field input:hover,
-.record-page .record-field select:hover { border-color: #8eaf97; }
-.record-page .record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px 16px; margin-top: 24px; }
-.record-page .record-field-wide { grid-column: 1 / -1; }
-.record-page .record-submit {
-  display: block;
-  width: 100%;
-  margin-top: 27px;
-  padding: 14px 18px;
-  border: 1px solid var(--accent);
-  border-radius: 7px;
-  color: #fff;
-  background: var(--accent);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.record-page .record-submit:hover:not(:disabled) { background: var(--accent-strong); }
-.record-page .record-submit:disabled { cursor: wait; opacity: .65; }
-.record-page .record-message { margin: 18px 0 0; font-size: 13px; line-height: 1.6; font-weight: 600; }
-.record-page .record-message-success { color: var(--accent-strong); }
-.record-page .record-message-error { color: #b33a30; }
-.record-page a:focus-visible,
-.record-page input:focus-visible,
-.record-page select:focus-visible,
-.record-page button:focus-visible { outline: 3px solid #1f7a4d55; outline-offset: 3px; }
+.record-page { width: min(760px, 100%); margin: 0 auto; padding: 36px 28px 64px; color: var(--ink); }
+.record-page-heading { margin-bottom: 24px; }
+.record-page-heading h1 { margin: 0; font-size: clamp(28px, 4vw, 34px); line-height: 1.2; letter-spacing: -.9px; font-weight: 700; }
+.record-form { padding: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.record-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.record-field { min-width: 0; margin-bottom: 20px; }
+.record-field label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+.record-field input, .record-field select { display: block; width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 14px; line-height: 1.5; }
+.record-field input:hover, .record-field select:hover { border-color: #96b49f; }
+.record-field input:focus-visible, .record-field select:focus-visible, .record-submit:focus-visible { outline: 3px solid #1f7a4d44; outline-offset: 2px; }
+.record-form .record-details { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.record-details legend { padding: 0; font-size: 14px; font-weight: 600; }
+.record-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; margin-top: 18px; }
+.record-hint, .record-account-message { margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.record-submit { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 4px; padding: 11px 22px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.record-submit:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
+.record-submit:disabled { opacity: .55; cursor: default; }
+.record-message { margin: 18px 0 0; font-size: 13px; line-height: 1.6; }
+.record-message-success { color: var(--accent-strong); }
+.record-message-error { color: #b33a30; }
 
 @media (max-width: 600px) {
-  .record-page { padding: 25px 18px 55px; }
-  .record-page .record-page-heading h1 { font-size: 32px; letter-spacing: -1.2px; }
-  .record-page .record-form { padding: 20px; }
-  .record-page .record-fields { grid-template-columns: 1fr; }
+  .record-page { padding: 28px 20px 44px; }
+  .record-form { padding: 22px; }
+  .record-fields { grid-template-columns: 1fr; }
+  .record-submit { width: 100%; }
 }

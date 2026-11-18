@@ -7,6 +7,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const feature = join(root, 'src/features/deal-discussions')
 const sharedFirebase = join(root, 'src/firebase.js')
 const sharedUrls = join(root, 'src/shared/urls.js')
+const sharedLogo = join(root, 'src/shared/GatorByteLogo.jsx')
+const sharedDealDelete = join(root, 'src/shared/DealDeleteButton.jsx')
+const sharedLogin = join(root, 'src/login/login.jsx')
+const sharedLoginCss = join(root, 'src/login/Login.css')
+const sharedAccount = join(root, 'src/login/useAccount.js')
+const sharedRoles = join(root, 'src/login/roles.js')
+const sharedProfile = join(root, 'src/login/profile.js')
 const publicIntegration = join(feature, 'integration.js')
 
 function files(folder) {
@@ -45,16 +52,49 @@ function dependencyGraph(entry) {
   return visited
 }
 
+// Login is intentionally shared by both entries. Keep its CSS inside the
+// component namespace; sibling selectors and global at-rules can escape it.
+function assertLoginStyles(source, label) {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, '')
+  const rules = /([^{}]+)\{([^{}]*)\}/g
+  let end = 0
+  let count = 0
+  for (const rule of css.matchAll(rules)) {
+    assert.equal(css.slice(end, rule.index).trim(), '', `${label}: unsupported global or nested CSS`)
+    for (const selector of rule[1].split(',')) {
+      const scoped = selector.trim()
+      assert.ok(/^\.login-[a-zA-Z0-9_-]+(?=$|[\s.:#[>])/.test(scoped) && !/[+~]/.test(scoped),
+        `${label}: shared CSS must stay inside .login-* components: ${scoped}`)
+    }
+    end = rule.index + rule[0].length
+    count++
+  }
+  assert.ok(count && css.slice(end).trim() === '', `${label}: expected flat, scoped login styles`)
+}
+
+assertLoginStyles(readFileSync(sharedLoginCss, 'utf8'), 'src/login/Login.css')
+
 for (const file of files(feature).filter((path) => /\.(?:js|jsx|css)$/.test(path))) {
   for (const dependency of imports(file)) {
     if (dependency.startsWith(`${feature}${sep}`)) continue
     assert.ok(dependency === sharedUrls ||
+      (file === join(feature, 'DealPage.jsx') && [sharedLogin, sharedLogo, sharedDealDelete].includes(dependency)) ||
+      (file === join(feature, 'components/Comments.jsx') &&
+        [sharedAccount, sharedRoles].includes(dependency)) ||
       (file === join(feature, 'data/deals.js') && dependency === sharedFirebase),
     `Unexpected feature dependency: ${relative(root, file)} imports ${relative(root, dependency)}`)
   }
 }
 
 const featureGraph = dependencyGraph(join(feature, 'main.jsx'))
+const sharedFiles = new Set([
+  sharedFirebase, sharedUrls, sharedLogo, sharedLogin, sharedLoginCss, sharedAccount, sharedRoles, sharedProfile,
+  sharedDealDelete,
+])
+for (const file of featureGraph) {
+  assert.ok(file.startsWith(`${feature}${sep}`) || sharedFiles.has(file),
+    `Unexpected transitive feature dependency: ${relative(root, file)}`)
+}
 for (const forbidden of ['src/App.jsx', 'src/App.css', 'src/index.css', 'src/main.jsx']) {
   assert.ok(!featureGraph.has(join(root, forbidden)), `Deal entry depends on ${forbidden}`)
 }
@@ -93,10 +133,13 @@ function entryStyles(entry) {
 
 const mainStyles = entryStyles('index.html')
 const dealStyles = entryStyles('deal.html')
-assert.ok(mainStyles.size && dealStyles.size, 'Both entries must own styles')
-assert.ok([...dealStyles].every((style) => !mainStyles.has(style)), 'Entries must not share stylesheets')
+assert.ok([...mainStyles].some((style) => !dealStyles.has(style)) &&
+  [...dealStyles].some((style) => !mainStyles.has(style)), 'Both entries must own independent page styles')
+for (const style of dealStyles) {
+  if (mainStyles.has(style)) assertLoginStyles(readFileSync(join(root, 'dist', style), 'utf8'), style)
+}
 const dealCss = [...dealStyles].map((file) => readFileSync(join(root, 'dist', file), 'utf8')).join('\n')
 assert.ok(dealCss.includes('#deal-root'), 'Deal entry must include its own page reset')
 assert.ok(!dealCss.includes('.record-card') && !dealCss.includes('.tables-section'),
   'Host page styles leaked into the deal bundle')
-console.log('Deal isolation passed: dedicated entry, independent styles, public integration, explicit shared dependencies.')
+console.log('Deal isolation passed: dedicated entries, independent page styles, scoped shared login, public integration.')

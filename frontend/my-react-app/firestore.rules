@@ -2,19 +2,143 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function configuredRole(data) {
+      return data.get('userState', data.get('userStatus', 0));
+    }
+
+    function accountRole() {
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      let profile = exists(path) ? get(path).data : {};
+      let role = configuredRole(profile);
+      return role == 1 ? 1 : (role == 2 ? 2 : 0);
+    }
+
+    function isAdmin() {
+      return signedIn() && accountRole() == 1;
+    }
+
+    function isOwner() {
+      return signedIn() && accountRole() == 2;
+    }
+
+    function optionalString(data, field) {
+      return !(field in data) || data[field] is string;
+    }
+
+    function validUserId(value) {
+      return (value is string && value.size() > 0) || value is int;
+    }
+
+    function validLink(value) {
+      return value is string && value.size() > 0 && value.size() <= 8192
+        && value.matches('^https?://[^\\s]+$');
+    }
+
+    function validProfile(data) {
+      let role = configuredRole(data);
+      return data.keys().hasOnly([
+          'userID', 'userStatus', 'userState', 'dateCreated',
+          'username', 'name', 'displayName', 'email'
+        ])
+        && data.keys().hasAll(['userID', 'dateCreated'])
+        && validUserId(data.userID)
+        && data.dateCreated is timestamp
+        && role in [0, 1, 2]
+        && (!('userStatus' in data) || data.userStatus in [0, 1, 2])
+        && optionalString(data, 'username')
+        && optionalString(data, 'name')
+        && optionalString(data, 'displayName')
+        && optionalString(data, 'email');
+    }
+
+    function validApproval(data) {
+      return data.status in ['pending', 'approved', 'denied']
+        && (data.status == 'approved' ? data.dateApproved is timestamp : data.dateApproved == null);
+    }
+
+    function validDeal(data) {
+      return data.keys().hasOnly([
+          'link', 'userID', 'status', 'dateSubmitted', 'dateApproved', 'upvotes',
+          'title', 'description', 'imageUrl', 'price', 'currency'
+        ])
+        && data.keys().hasAll(['link', 'userID', 'status', 'dateSubmitted', 'dateApproved', 'upvotes'])
+        && validLink(data.link)
+        && validUserId(data.userID)
+        && data.dateSubmitted is timestamp
+        && data.upvotes is int && data.upvotes >= 0
+        && validApproval(data)
+        && optionalString(data, 'title')
+        && optionalString(data, 'description')
+        && optionalString(data, 'imageUrl')
+        && optionalString(data, 'currency')
+        && (!('price' in data) || ((data.price is int || data.price is float) && data.price >= 0));
+    }
+
+    function ownDealDefaults(data) {
+      return data.userID == request.auth.uid
+        && data.dateSubmitted == request.time
+        && data.upvotes == 0;
+    }
+
+    function validWishlist(data) {
+      return data.keys().hasOnly(['dealID', 'name', 'link', 'userID', 'dateCreated'])
+        && data.keys().hasAll(['dealID', 'name', 'link', 'userID', 'dateCreated'])
+        && data.dealID is string && data.dealID.size() > 0 && data.dealID.size() <= 1500
+        && data.dealID.matches('^[^/]+$')
+        && exists(/databases/$(database)/documents/deals/$(data.dealID))
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && validLink(data.link)
+        && validUserId(data.userID)
+        && data.dateCreated == request.time;
+    }
+
     match /users/{userId} {
+      // Public names support deal attribution and the existing leaderboard.
       allow read: if true;
-      allow create, update: if request.auth != null
-        && request.auth.uid == userId;
+      allow create: if signedIn() && validProfile(request.resource.data)
+        && (isOwner() || (request.auth.uid == userId
+          && request.resource.data.userID == request.auth.uid
+          && request.resource.data.keys().hasAny(['userState', 'userStatus'])
+          && request.resource.data.get('userStatus', 0) == 0
+          && request.resource.data.get('userState', 0) == 0
+          && request.resource.data.dateCreated == request.time));
+      allow update: if signedIn() && validProfile(request.resource.data)
+        && (isOwner() || (request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['username', 'name', 'displayName', 'email'])));
     }
 
     match /deals/{dealId} {
       allow read: if true;
-      allow create: if request.auth != null;
+      allow create: if signedIn() && validDeal(request.resource.data)
+        && (isOwner() || (ownDealDefaults(request.resource.data)
+          && (isAdmin()
+            ? (request.resource.data.status != 'approved' || request.resource.data.dateApproved == request.time)
+            : request.resource.data.status == 'pending')));
+      allow update: if signedIn() && (
+        (isOwner() && validDeal(request.resource.data))
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'dateApproved'])
+          && validApproval(request.resource.data)
+          && (request.resource.data.status != 'approved' || request.resource.data.dateApproved == request.time))
+      );
+      allow delete: if isAdmin() || isOwner();
     }
 
     match /wishlist/{wishlistId} {
-      allow create: if request.auth != null;
+      allow read: if signedIn() && (isOwner() || resource.data.userID == request.auth.uid);
+      allow create: if signedIn() && validWishlist(request.resource.data)
+        && (isOwner() || request.resource.data.userID == request.auth.uid);
+      // Saving the same deal again reuses its document instead of duplicating it.
+      allow update: if signedIn() && validWishlist(request.resource.data)
+        && (isOwner() || resource.data.userID == request.auth.uid)
+        && request.resource.data.userID == resource.data.userID
+        && request.resource.data.dealID == resource.data.get('dealID', '');
+      allow delete: if signedIn() && (isOwner() || resource.data.userID == request.auth.uid);
     }
   }
 }

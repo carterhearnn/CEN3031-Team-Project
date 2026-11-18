@@ -113,8 +113,8 @@ export function DealCard({ deal, className = "" }) {
   const image = [externalUrl(deal.imageUrl), externalUrl(metadata?.image)].find((value) => value && !brokenImages.includes(value));
   const price = priceLabel(deal.price ?? metadata?.price, deal.currency || metadata?.currency);
 
-  return <a ref={card} className={`home-deal-card ${className}`} href={dealPath(deal.id)} target="_blank" rel="noopener noreferrer"
-    aria-label={`${title} — view deal and comments (opens in a new tab)`}>
+  return <a ref={card} className={`home-deal-card ${className}`} href={dealPath(deal.id)}
+    aria-label={`View ${title} and comments`}>
     <div className="home-deal-image">
       {image ? <img src={image} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBrokenImages((current) => [...current, image])} /> :
         <svg width="38" height="38" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="7" y="10" width="26" height="26" rx="4" stroke="currentColor" strokeWidth="1.5" /><path d="M14 14V9a6 6 0 0 1 12 0v5M15 24h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>}
